@@ -19,10 +19,6 @@ pub struct Cli {
     )]
     pub posted_data: String,
 
-    /// Optional. Path to the config.json file. If left blank, assume ./config.json
-    #[arg(short, long, default_value = "./config.json")]
-    pub config: PathBuf,
-
     /// Set this to execute the program normally, except that no prices will actually be changed in
     /// Shopify. Useful for debugging
     #[arg(short, long = "dry")]
