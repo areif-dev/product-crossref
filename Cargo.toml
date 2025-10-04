@@ -1,0 +1,8 @@
+[package]
+name = "product-crossref"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+abc-uiautomation = { version = "1.0.0", path = "../abc-uiautomation" }
+clap = { version = "4.5.23", features = ["derive"] }
