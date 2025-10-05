@@ -1,4 +1,8 @@
+mod product;
+
 use std::path::PathBuf;
+
+use clap::Parser;
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -19,10 +23,21 @@ pub struct Cli {
     )]
     pub posted_data: String,
 
+    /// Path to the CSV export of the order to import data from. Must include headers for "sku",
+    /// "description", "upc", "cost", "list", "weight"
+    #[arg(
+        short,
+        long,
+        default_value = "C:\\Users\\User\\Downloads\\order-export.csv"
+    )]
+    pub export: String,
+
     /// Set this to execute the program normally, except that no prices will actually be changed in
     /// Shopify. Useful for debugging
     #[arg(short, long = "dry")]
     pub dry_run: bool,
 }
 
-fn main() {}
+fn main() {
+    let cli = Cli::parse();
+}

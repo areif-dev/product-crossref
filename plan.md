@@ -4,6 +4,7 @@
 - cost
 - suggested retail
 - description
+- weight
 
 ## Steps 
 - Go to F10-I
