@@ -1,8 +1,14 @@
 mod product;
 
-use std::path::PathBuf;
+use std::{error::Error, fs::File, path::PathBuf};
 
+use abc_uiautomation::{
+    accounts_receivable::load_invoice, ensure_abc, inventory::load_inventory_screen,
+};
 use clap::Parser;
+use ean13::Ean13;
+use product::{map_upcs, parse_abc_item_files, AbcParseError, AbcProduct, ExportedProduct};
+use rust_decimal::{dec, Decimal};
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -38,6 +44,103 @@ pub struct Cli {
     pub dry_run: bool,
 }
 
-fn main() {
+impl Cli {
+    fn parse_export_file(&self) -> Result<Vec<ExportedProduct>, AbcParseError> {
+        let mut reader = csv::ReaderBuilder::new().from_path(&self.export)?;
+        let mut prods = Vec::new();
+        for (i, row) in reader.records().enumerate() {
+            let row = row?;
+            let sku = row
+                .get(0)
+                .ok_or(AbcParseError::MissingField("sku".to_string(), i))?
+                .to_string();
+            let upc = Ean13::new(
+                row.get(1)
+                    .ok_or(AbcParseError::MissingField("upc".to_string(), i))?,
+            )
+            .or_else(|e| {
+                Err(AbcParseError::Custom(format!(
+                    "Error in row {} while parsing UPC field: `{}`",
+                    i, e
+                )))
+            })?;
+            let desc = row
+                .get(2)
+                .ok_or(AbcParseError::MissingField("desc".to_string(), i))?
+                .to_string();
+            let weight: f64 = row
+                .get(3)
+                .ok_or(AbcParseError::MissingField("weight".to_string(), i))?
+                .parse()
+                .or_else(|e| {
+                    Err(AbcParseError::Custom(format!(
+                        "Error parsing weight in row {}: `{}`",
+                        i, e
+                    )))
+                })?;
+            let cost: Decimal = row
+                .get(4)
+                .ok_or(AbcParseError::MissingField("cost".to_string(), i))?
+                .parse()
+                .or_else(|e| {
+                    Err(AbcParseError::Custom(format!(
+                        "Failed to parse cost in row {} due to `{}`",
+                        i, e
+                    )))
+                })?;
+            let retail: Decimal = row
+                .get(5)
+                .ok_or(AbcParseError::MissingField("retail".to_string(), i))?
+                .parse()
+                .or_else(|e| {
+                    Err(AbcParseError::Custom(format!(
+                        "Failed to parse retail in row {} due to `{}`",
+                        i, e
+                    )))
+                })?;
+
+            prods.push(ExportedProduct {
+                sku,
+                upc,
+                desc,
+                weight,
+                cost,
+                retail,
+            });
+        }
+        Ok(prods)
+    }
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
+    let exported_products = cli
+        .parse_export_file()
+        .or_else(|e| Err(format!("Failed to parse the export file due to `{}`", e)))?;
+    let abc_products = parse_abc_item_files(&cli.item_data, &cli.posted_data)
+        .or_else(|e| Err(format!("Failed to parse abc item export due to `{}`", e)))?;
+    let abc_prods_by_upc = map_upcs(&abc_products);
+
+    //let mut new_prods = Vec::new();
+    //let mut all_dups = Vec::new();
+    //let mut double_check = Vec::new();
+    //for ex_prod in exported_products {
+    //    let Some((dups, abc_prod)) = abc_prods_by_upc.get(&ex_prod.upc) else {
+    //        new_prods.push(ex_prod);
+    //        continue;
+    //    };
+    //    if !dups.is_empty() {
+    //        all_dups.push(dups);
+    //        continue;
+    //    }
+    //    if ex_prod.retail >= abc_prod.list() * dec!(2) || ex_prod.cost >= abc_prod.cost() * dec!(2)
+    //    {
+    //        double_check.push(ex_prod);
+    //        continue;
+    //    }
+    //    let abc_window = ensure_abc()?;
+    //    let inventory_screen = load_inventory_screen(&abc_window)?;
+    //    load_invoice(&inventory_screen, 10)?;
+    //}
+    Ok(())
 }

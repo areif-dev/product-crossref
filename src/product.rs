@@ -150,10 +150,12 @@ impl AbcProductBuilder {
     }
 }
 
+pub type AbcProductsBySku = HashMap<String, AbcProduct>;
+
 pub fn parse_abc_item_files(
     item_path: &str,
     posted_path: &str,
-) -> Result<HashMap<String, AbcProduct>, AbcParseError> {
+) -> Result<AbcProductsBySku, AbcParseError> {
     let mut item_data = csv::ReaderBuilder::new()
         .delimiter(b'\t')
         .has_headers(false)
@@ -317,12 +319,18 @@ pub fn map_upcs(
 #[derive(Debug)]
 pub enum AbcParseError {
     CsvError(csv::Error),
+    MissingField(String, usize),
     Custom(String),
 }
 
 impl std::fmt::Display for AbcParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        match self {
+            Self::MissingField(field, row) => {
+                write!(f, "Missing field `{}` in row {}", field, row)
+            }
+            _ => write!(f, "{:?}", self),
+        }
     }
 }
 
@@ -332,4 +340,14 @@ impl From<csv::Error> for AbcParseError {
     fn from(value: csv::Error) -> Self {
         Self::CsvError(value)
     }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ExportedProduct {
+    pub sku: String,
+    pub upc: Ean13,
+    pub desc: String,
+    pub weight: Option<f64>,
+    pub cost: Decimal,
+    pub retail: Option<Decimal>,
 }
