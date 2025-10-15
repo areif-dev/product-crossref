@@ -3,7 +3,10 @@ mod product;
 use std::{error::Error, fs::File, path::PathBuf};
 
 use abc_uiautomation::{
-    accounts_receivable::load_invoice, ensure_abc, inventory::load_inventory_screen,
+    accounts_receivable::load_invoice,
+    ensure_abc,
+    inventory::{clear_upc, load_inventory_screen, load_item, set_upc},
+    send_ctrl_n, wait, UIElement, SHORT_WAIT_MS,
 };
 use clap::Parser;
 use ean13::Ean13;
@@ -55,6 +58,21 @@ impl Cli {
     }
 }
 
+fn fix_upc(
+    inventory_window: &UIElement,
+    abc_prod: &AbcProduct,
+    ex_prod: &ExportedProduct,
+) -> Result<(), Box<dyn Error>> {
+    clear_upc(inventory_window, true)?;
+    for upc in abc_prod.upcs() {
+        if upc != ex_prod.upc {
+            set_upc(inventory_window, upc)?;
+        }
+    }
+    set_upc(inventory_window, ex_prod.upc)?;
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
     let exported_products = cli
@@ -64,26 +82,42 @@ fn main() -> Result<(), Box<dyn Error>> {
         .or_else(|e| Err(format!("Failed to parse abc item export due to `{}`", e)))?;
     let abc_prods_by_upc = map_upcs(&abc_products);
 
-    //let mut new_prods = Vec::new();
-    //let mut all_dups = Vec::new();
-    //let mut double_check = Vec::new();
-    //for ex_prod in exported_products {
-    //    let Some((dups, abc_prod)) = abc_prods_by_upc.get(&ex_prod.upc) else {
-    //        new_prods.push(ex_prod);
-    //        continue;
-    //    };
-    //    if !dups.is_empty() {
-    //        all_dups.push(dups);
-    //        continue;
-    //    }
-    //    if ex_prod.retail >= abc_prod.list() * dec!(2) || ex_prod.cost >= abc_prod.cost() * dec!(2)
-    //    {
-    //        double_check.push(ex_prod);
-    //        continue;
-    //    }
-    //    let abc_window = ensure_abc()?;
-    //    let inventory_screen = load_inventory_screen(&abc_window)?;
-    //    load_invoice(&inventory_screen, 10)?;
-    //}
+    let mut new_prods = Vec::new();
+    let mut all_dups = Vec::new();
+    let mut double_check = Vec::new();
+    let abc_window = ensure_abc()?;
+    let inventory_screen = load_inventory_screen(&abc_window)?;
+    wait(SHORT_WAIT_MS * 5);
+    send_ctrl_n(&abc_window, false)?;
+    for ex_prod in exported_products {
+        let mut fixes = Vec::new();
+        let Some((dups, abc_prod)) = abc_prods_by_upc.get(&ex_prod.upc) else {
+            new_prods.push(ex_prod);
+            println!("{:#?}", new_prods);
+            continue;
+        };
+        if !dups.is_empty() {
+            all_dups.push(dups);
+            println!("{:#?}", all_dups);
+            continue;
+        }
+        if let Some(retail) = ex_prod.retail {
+            if retail >= abc_prod.list() * dec!(2) || ex_prod.cost >= abc_prod.cost() * dec!(2) {
+                double_check.push(ex_prod);
+                continue;
+            }
+        }
+        if !abc_prod.upcs().ends_with(&[ex_prod.upc]) {
+            fixes.push(fix_upc);
+        }
+        if !fixes.is_empty() {
+            send_ctrl_n(&inventory_screen, false)?;
+            load_item(&inventory_screen, &abc_prod.sku())?;
+            for fix in fixes {
+                fix(&inventory_screen, abc_prod, &ex_prod)?;
+            }
+            inventory_screen.send_keys("{F9}", SHORT_WAIT_MS)?;
+        }
+    }
     Ok(())
 }

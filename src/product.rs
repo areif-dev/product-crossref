@@ -231,10 +231,7 @@ pub fn parse_abc_item_files(
                 i
             )))?
             .parse()
-            .or(Err(AbcParseError::Custom(format!(
-                "Failed to parse f64 from weight in row {}",
-                i
-            ))))?;
+            .unwrap_or(-1.0);
 
         products.insert(
             sku.clone(),
