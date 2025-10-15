@@ -48,65 +48,8 @@ impl Cli {
     fn parse_export_file(&self) -> Result<Vec<ExportedProduct>, AbcParseError> {
         let mut reader = csv::ReaderBuilder::new().from_path(&self.export)?;
         let mut prods = Vec::new();
-        for (i, row) in reader.records().enumerate() {
-            let row = row?;
-            let sku = row
-                .get(0)
-                .ok_or(AbcParseError::MissingField("sku".to_string(), i))?
-                .to_string();
-            let upc = Ean13::new(
-                row.get(1)
-                    .ok_or(AbcParseError::MissingField("upc".to_string(), i))?,
-            )
-            .or_else(|e| {
-                Err(AbcParseError::Custom(format!(
-                    "Error in row {} while parsing UPC field: `{}`",
-                    i, e
-                )))
-            })?;
-            let desc = row
-                .get(2)
-                .ok_or(AbcParseError::MissingField("desc".to_string(), i))?
-                .to_string();
-            let weight: f64 = row
-                .get(3)
-                .ok_or(AbcParseError::MissingField("weight".to_string(), i))?
-                .parse()
-                .or_else(|e| {
-                    Err(AbcParseError::Custom(format!(
-                        "Error parsing weight in row {}: `{}`",
-                        i, e
-                    )))
-                })?;
-            let cost: Decimal = row
-                .get(4)
-                .ok_or(AbcParseError::MissingField("cost".to_string(), i))?
-                .parse()
-                .or_else(|e| {
-                    Err(AbcParseError::Custom(format!(
-                        "Failed to parse cost in row {} due to `{}`",
-                        i, e
-                    )))
-                })?;
-            let retail: Decimal = row
-                .get(5)
-                .ok_or(AbcParseError::MissingField("retail".to_string(), i))?
-                .parse()
-                .or_else(|e| {
-                    Err(AbcParseError::Custom(format!(
-                        "Failed to parse retail in row {} due to `{}`",
-                        i, e
-                    )))
-                })?;
-
-            prods.push(ExportedProduct {
-                sku,
-                upc,
-                desc,
-                weight,
-                cost,
-                retail,
-            });
+        for row in reader.deserialize() {
+            prods.push(row?);
         }
         Ok(prods)
     }
