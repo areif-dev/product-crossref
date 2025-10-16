@@ -98,6 +98,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
         matched.push(ex_prod.clone());
+
+        // Skip actually making changes in ABC if the user asked for a dry run
+        if cli.dry_run {
+            continue;
+        }
         if !abc_prod.upcs().ends_with(&[ex_prod.upc]) {
             fixes.push(fix_upc);
         }
