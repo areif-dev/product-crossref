@@ -113,7 +113,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             fixes.push(fix_cost);
         }
         if let Some(retail) = ex_prod.retail {
-            if retail != abc_prod.list() {
+            if ex_prod.cost > abc_prod.cost() && retail > abc_prod.list() {
                 fixes.push(fix_retail);
             }
         }
