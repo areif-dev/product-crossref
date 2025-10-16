@@ -1,23 +1,17 @@
+mod fixers;
 mod product;
 
-use std::{
-    error::Error,
-    fs::{self, File},
-    path::PathBuf,
-};
+use std::error::Error;
 
 use abc_uiautomation::{
-    accounts_receivable::load_invoice,
     ensure_abc,
-    inventory::{clear_upc, load_inventory_screen, load_item, set_upc},
-    send_ctrl_n, set_text_box_value, wait, UIElement, SHORT_WAIT_MS,
+    inventory::{load_inventory_screen, load_item},
+    send_ctrl_n, wait, UIElement, SHORT_WAIT_MS,
 };
 use clap::Parser;
-use ean13::Ean13;
-use product::{
-    map_upcs, parse_abc_item_files, AbcParseError, AbcProduct, DuplicateProducts, ExportedProduct,
-};
-use rust_decimal::{dec, Decimal};
+use fixers::{fix_cost, fix_group, fix_retail, fix_upc, fix_weight, write_logs};
+use product::{map_upcs, parse_abc_item_files, AbcParseError, AbcProduct, ExportedProduct};
+use rust_decimal::dec;
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -64,84 +58,6 @@ impl Cli {
     }
 }
 
-fn fix_upc(
-    inventory_window: &UIElement,
-    abc_prod: &AbcProduct,
-    ex_prod: &ExportedProduct,
-) -> Result<(), Box<dyn Error>> {
-    clear_upc(inventory_window, true)?;
-    for upc in abc_prod.upcs() {
-        if upc != ex_prod.upc {
-            set_upc(inventory_window, upc)?;
-        }
-    }
-    set_upc(inventory_window, ex_prod.upc)?;
-    Ok(())
-}
-
-fn fix_weight(
-    inventory_window: &UIElement,
-    _abc_prod: &AbcProduct,
-    ex_prod: &ExportedProduct,
-) -> Result<(), Box<dyn Error>> {
-    if let Some(weight) = ex_prod.weight {
-        set_text_box_value(inventory_window, 15, weight.to_string())?;
-    }
-    Ok(())
-}
-
-fn fix_cost(
-    inventory_window: &UIElement,
-    _abc_prod: &AbcProduct,
-    ex_prod: &ExportedProduct,
-) -> Result<(), Box<dyn Error>> {
-    set_text_box_value(inventory_window, 26, ex_prod.cost.to_string())?;
-    Ok(())
-}
-
-fn fix_retail(
-    inventory_window: &UIElement,
-    _abc_prod: &AbcProduct,
-    ex_prod: &ExportedProduct,
-) -> Result<(), Box<dyn Error>> {
-    if let Some(retail) = ex_prod.retail {
-        set_text_box_value(inventory_window, 25, retail.to_string())?;
-    }
-    Ok(())
-}
-
-fn fix_group(
-    inventory_window: &UIElement,
-    _abc_prod: &AbcProduct,
-    _ex_prod: &ExportedProduct,
-) -> Result<(), Box<dyn Error>> {
-    set_text_box_value(inventory_window, 39, "Z")?;
-    Ok(())
-}
-
-fn write_logs(
-    dups: Vec<&DuplicateProducts>,
-    new: Vec<ExportedProduct>,
-    check: Vec<ExportedProduct>,
-) -> std::io::Result<()> {
-    fs::write(
-        "./duplicate_products.txt",
-        format!(
-            "The following products all share the same UPC. You may want to fix that.\n\n{:#?}",
-            dups
-        ),
-    )?;
-    fs::write(
-        "./new_products.txt",
-        format!(
-            "The following products are new to ABC. Please enter them manually.\n\n{:#?}",
-            new
-        ),
-    )?;
-    fs::write("./double_check.txt", format!("The following products seem to have changed wildly. Please double check that their listings are correct.\n\n{:#?}", check))?;
-    Ok(())
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
     let exported_products = cli
@@ -154,30 +70,34 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut new_prods = Vec::new();
     let mut all_dups = Vec::new();
     let mut double_check = Vec::new();
+    let mut matched = Vec::new();
     let abc_window = ensure_abc()?;
     let inventory_screen = load_inventory_screen(&abc_window)?;
     wait(SHORT_WAIT_MS * 5);
     send_ctrl_n(&abc_window, false)?;
     for ex_prod in exported_products {
         let mut fixes: Vec<
-            fn(&UIElement, &AbcProduct, &ExportedProduct) -> Result<(), Box<dyn Error>>,
+            fn(&UIElement, &AbcProduct, &ExportedProduct) -> Result<(), abc_uiautomation::Error>,
         > = Vec::new();
         let Some((dups, abc_prod)) = abc_prods_by_upc.get(&ex_prod.upc) else {
             new_prods.push(ex_prod);
-            println!("{:#?}", new_prods);
             continue;
         };
         if !dups.is_empty() {
             all_dups.push(dups);
-            println!("{:#?}", all_dups);
             continue;
         }
         if let Some(retail) = ex_prod.retail {
-            if retail >= abc_prod.list() * dec!(2) || ex_prod.cost >= abc_prod.cost() * dec!(2) {
+            if retail >= abc_prod.list() * dec!(2)
+                || ex_prod.cost >= abc_prod.cost() * dec!(2)
+                || retail <= abc_prod.list() / dec!(2)
+                || ex_prod.cost <= abc_prod.cost() / dec!(2)
+            {
                 double_check.push(ex_prod);
                 continue;
             }
         }
+        matched.push(ex_prod.clone());
         if !abc_prod.upcs().ends_with(&[ex_prod.upc]) {
             fixes.push(fix_upc);
         }
@@ -205,6 +125,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    write_logs(all_dups, new_prods, double_check)?;
+    write_logs(all_dups, new_prods, double_check, matched)?;
     Ok(())
 }

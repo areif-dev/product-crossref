@@ -356,7 +356,7 @@ impl From<csv::Error> for AbcParseError {
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Clone)]
 pub struct ExportedProduct {
     pub sku: String,
     pub upc: Ean13,
