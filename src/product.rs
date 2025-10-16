@@ -18,7 +18,8 @@ pub struct AbcProduct {
     list: Decimal,
     cost: Decimal,
     stock: f64,
-    weight: f64,
+    group: Option<String>,
+    weight: Option<f64>,
     last_sold: Option<chrono::NaiveDate>,
 }
 
@@ -47,8 +48,12 @@ impl AbcProduct {
         self.stock
     }
 
-    pub fn weight(&self) -> f64 {
+    pub fn weight(&self) -> Option<f64> {
         self.weight
+    }
+
+    pub fn group(&self) -> Option<String> {
+        self.group.to_owned()
     }
 
     pub fn last_sold(&self) -> Option<chrono::NaiveDate> {
@@ -64,6 +69,7 @@ pub struct AbcProductBuilder {
     cost: Option<Decimal>,
     stock: Option<f64>,
     weight: Option<f64>,
+    group: Option<String>,
     last_sold: Option<chrono::NaiveDate>,
 }
 
@@ -77,6 +83,7 @@ impl AbcProductBuilder {
             cost: None,
             stock: None,
             weight: None,
+            group: None,
             last_sold: None,
         }
     }
@@ -136,6 +143,13 @@ impl AbcProductBuilder {
         }
     }
 
+    pub fn with_group(self, group: impl ToString) -> Self {
+        AbcProductBuilder {
+            group: Some(group.to_string()),
+            ..self
+        }
+    }
+
     pub fn build(self) -> Option<AbcProduct> {
         Some(AbcProduct {
             sku: self.sku.clone()?,
@@ -144,7 +158,8 @@ impl AbcProductBuilder {
             list: self.list?,
             cost: self.cost?,
             stock: self.stock?,
-            weight: self.weight?,
+            weight: self.weight,
+            group: self.group,
             last_sold: self.last_sold,
         })
     }
@@ -224,14 +239,15 @@ pub fn parse_abc_item_files(
             "Cannot parse a price in cents for cost in row {}",
             i
         ))))?;
-        let weight: f64 = row
-            .get(45)
-            .ok_or(AbcParseError::Custom(format!(
-                "Cannot fetch weight from row {}",
-                i
-            )))?
-            .parse()
-            .unwrap_or(-1.0);
+        let weight_str = row.get(45).ok_or(AbcParseError::Custom(format!(
+            "Cannot fetch weight from row {}",
+            i
+        )))?;
+        let weight = match weight_str.parse::<f64>() {
+            Ok(f) => Some(f),
+            Err(_) => None,
+        };
+        let group = row.get(18).map(ToOwned::to_owned);
 
         products.insert(
             sku.clone(),
@@ -243,6 +259,7 @@ pub fn parse_abc_item_files(
                 cost,
                 weight,
                 stock: 0.0,
+                group,
                 last_sold: None,
             },
         );
