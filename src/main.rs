@@ -1,16 +1,22 @@
 mod product;
 
-use std::{error::Error, fs::File, path::PathBuf};
+use std::{
+    error::Error,
+    fs::{self, File},
+    path::PathBuf,
+};
 
 use abc_uiautomation::{
     accounts_receivable::load_invoice,
     ensure_abc,
     inventory::{clear_upc, load_inventory_screen, load_item, set_upc},
-    send_ctrl_n, wait, UIElement, SHORT_WAIT_MS,
+    send_ctrl_n, set_text_box_value, wait, UIElement, SHORT_WAIT_MS,
 };
 use clap::Parser;
 use ean13::Ean13;
-use product::{map_upcs, parse_abc_item_files, AbcParseError, AbcProduct, ExportedProduct};
+use product::{
+    map_upcs, parse_abc_item_files, AbcParseError, AbcProduct, DuplicateProducts, ExportedProduct,
+};
 use rust_decimal::{dec, Decimal};
 
 #[derive(clap::Parser)]
@@ -73,6 +79,69 @@ fn fix_upc(
     Ok(())
 }
 
+fn fix_weight(
+    inventory_window: &UIElement,
+    _abc_prod: &AbcProduct,
+    ex_prod: &ExportedProduct,
+) -> Result<(), Box<dyn Error>> {
+    if let Some(weight) = ex_prod.weight {
+        set_text_box_value(inventory_window, 15, weight.to_string())?;
+    }
+    Ok(())
+}
+
+fn fix_cost(
+    inventory_window: &UIElement,
+    _abc_prod: &AbcProduct,
+    ex_prod: &ExportedProduct,
+) -> Result<(), Box<dyn Error>> {
+    set_text_box_value(inventory_window, 26, ex_prod.cost.to_string())?;
+    Ok(())
+}
+
+fn fix_retail(
+    inventory_window: &UIElement,
+    _abc_prod: &AbcProduct,
+    ex_prod: &ExportedProduct,
+) -> Result<(), Box<dyn Error>> {
+    if let Some(retail) = ex_prod.retail {
+        set_text_box_value(inventory_window, 25, retail.to_string())?;
+    }
+    Ok(())
+}
+
+fn fix_group(
+    inventory_window: &UIElement,
+    _abc_prod: &AbcProduct,
+    _ex_prod: &ExportedProduct,
+) -> Result<(), Box<dyn Error>> {
+    set_text_box_value(inventory_window, 39, "Z")?;
+    Ok(())
+}
+
+fn write_logs(
+    dups: Vec<&DuplicateProducts>,
+    new: Vec<ExportedProduct>,
+    check: Vec<ExportedProduct>,
+) -> std::io::Result<()> {
+    fs::write(
+        "./duplicate_products.txt",
+        format!(
+            "The following products all share the same UPC. You may want to fix that.\n\n{:#?}",
+            dups
+        ),
+    )?;
+    fs::write(
+        "./new_products.txt",
+        format!(
+            "The following products are new to ABC. Please enter them manually.\n\n{:#?}",
+            new
+        ),
+    )?;
+    fs::write("./double_check.txt", format!("The following products seem to have changed wildly. Please double check that their listings are correct.\n\n{:#?}", check))?;
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
     let exported_products = cli
@@ -90,7 +159,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     wait(SHORT_WAIT_MS * 5);
     send_ctrl_n(&abc_window, false)?;
     for ex_prod in exported_products {
-        let mut fixes = Vec::new();
+        let mut fixes: Vec<
+            fn(&UIElement, &AbcProduct, &ExportedProduct) -> Result<(), Box<dyn Error>>,
+        > = Vec::new();
         let Some((dups, abc_prod)) = abc_prods_by_upc.get(&ex_prod.upc) else {
             new_prods.push(ex_prod);
             println!("{:#?}", new_prods);
@@ -110,14 +181,30 @@ fn main() -> Result<(), Box<dyn Error>> {
         if !abc_prod.upcs().ends_with(&[ex_prod.upc]) {
             fixes.push(fix_upc);
         }
+        if ex_prod.weight.is_some() && abc_prod.weight() != ex_prod.weight {
+            fixes.push(fix_weight);
+        }
+        if ex_prod.cost != abc_prod.cost() {
+            fixes.push(fix_cost);
+        }
+        if let Some(retail) = ex_prod.retail {
+            if retail != abc_prod.list() {
+                fixes.push(fix_retail);
+            }
+        }
+        if abc_prod.group().is_none() || abc_prod.group().is_some_and(|g| g.is_empty()) {
+            fixes.push(fix_group);
+        }
         if !fixes.is_empty() {
             send_ctrl_n(&inventory_screen, false)?;
             load_item(&inventory_screen, &abc_prod.sku())?;
-            for fix in fixes {
-                fix(&inventory_screen, abc_prod, &ex_prod)?;
+            for f in fixes {
+                f(&inventory_screen, abc_prod, &ex_prod)?;
             }
             inventory_screen.send_keys("{F9}", SHORT_WAIT_MS)?;
         }
     }
+
+    write_logs(all_dups, new_prods, double_check)?;
     Ok(())
 }
