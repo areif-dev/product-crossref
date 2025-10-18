@@ -32,3 +32,6 @@
     - Enter the vendor provided cost
 - If the list in ABC does not match the vendor list:
     - If the cost has gone down or stayed the same, change nothing
+
+## Todo 
+- [ ] Only mark a product as a duplicate if the "duplicates" have different skus 
