@@ -3,6 +3,7 @@ mod product;
 
 use std::error::Error;
 
+use abc_product::{AbcParseError, AbcProduct};
 use abc_uiautomation::{
     ensure_abc,
     inventory::{load_inventory_screen, load_item},
@@ -10,7 +11,7 @@ use abc_uiautomation::{
 };
 use clap::Parser;
 use fixers::{fix_cost, fix_group, fix_retail, fix_upc, fix_weight, write_logs};
-use product::{map_upcs, parse_abc_item_files, AbcParseError, AbcProduct, ExportedProduct};
+use product::{map_upcs, ExportedProduct};
 use rust_decimal::dec;
 
 #[derive(clap::Parser)]
@@ -63,7 +64,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let exported_products = cli
         .parse_export_file()
         .or_else(|e| Err(format!("Failed to parse the export file due to `{}`", e)))?;
-    let abc_products = parse_abc_item_files(&cli.item_data, &cli.posted_data)
+    let abc_products = AbcProduct::from_db_export(&cli.item_data, &cli.posted_data)
         .or_else(|e| Err(format!("Failed to parse abc item export due to `{}`", e)))?;
     let abc_prods_by_upc = map_upcs(&abc_products);
 

@@ -1,11 +1,12 @@
 use std::fs;
 
+use abc_product::AbcProduct;
 use abc_uiautomation::{
     inventory::{clear_upc, set_upc},
     set_text_box_value, UIElement,
 };
 
-use crate::product::{AbcProduct, DuplicateProducts, ExportedProduct};
+use crate::product::{DuplicateProducts, ExportedProduct};
 
 /// Controls ABC Client4 window to reorder the UPCs of an inventory item so that the primary UPC
 /// from a vendor exported list is the primary UPC in ABC. IE the last UPC in ABC will match the
