@@ -321,8 +321,10 @@ pub fn map_upcs(
             if let Some((dup, prod)) = upc_map.insert(upc.clone(), (Vec::new(), product.to_owned()))
             {
                 let mut dup = dup;
-                dup.push(product.to_owned());
-                dup.push(prod.clone());
+                if product.sku() != prod.sku() {
+                    dup.push(product.to_owned());
+                    dup.push(prod.clone());
+                }
                 upc_map.insert(upc.clone(), (dup, prod));
             }
         }

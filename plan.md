@@ -34,4 +34,5 @@
     - If the cost has gone down or stayed the same, change nothing
 
 ## Todo 
-- [ ] Only mark a product as a duplicate if the "duplicates" have different skus 
+- [x] Only mark a product as a duplicate if the "duplicates" have different skus 
+- [ ] try looking up products by alt skus
