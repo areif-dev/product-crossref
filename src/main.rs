@@ -10,7 +10,7 @@ use abc_uiautomation::{
     send_ctrl_n, wait, UIElement, SHORT_WAIT_MS,
 };
 use clap::Parser;
-use fixers::{fix_cost, fix_group, fix_retail, fix_upc, fix_weight, write_logs};
+use fixers::{fix_alt_sku, fix_cost, fix_group, fix_retail, fix_upc, fix_weight, write_logs};
 use product::{map_upcs, ExportedProduct};
 use rust_decimal::dec;
 
@@ -104,22 +104,45 @@ fn main() -> Result<(), Box<dyn Error>> {
         if cli.dry_run {
             continue;
         }
-        if !abc_prod.upcs().ends_with(&[ex_prod.upc]) {
+        let upc_in_correct_spot = abc_prod.upcs().ends_with(&[ex_prod.upc]);
+        if !upc_in_correct_spot {
             fixes.push(fix_upc);
         }
-        if ex_prod.weight.is_some() && abc_prod.weight() != ex_prod.weight {
+        let weights_are_different = ex_prod.weight.is_some() && abc_prod.weight() != ex_prod.weight;
+        if weights_are_different {
             fixes.push(fix_weight);
         }
-        if ex_prod.cost != abc_prod.cost() {
+        let costs_are_different = ex_prod.cost != abc_prod.cost();
+        if costs_are_different {
             fixes.push(fix_cost);
         }
         if let Some(retail) = ex_prod.retail {
-            if ex_prod.cost > abc_prod.cost() && retail > abc_prod.list() {
+            let cost_went_up = ex_prod.cost > abc_prod.cost();
+            let list_went_up = retail > abc_prod.list();
+            if cost_went_up && list_went_up {
                 fixes.push(fix_retail);
             }
         }
-        if abc_prod.group().is_none() || abc_prod.group().is_some_and(|g| g.is_empty()) {
+        let group_is_missing =
+            abc_prod.group().is_none() || abc_prod.group().is_some_and(|g| g.is_empty());
+        if group_is_missing {
             fixes.push(fix_group);
+        }
+        let vendor_sku_is_missing = !abc_prod
+            .alt_skus()
+            .iter()
+            .filter_map(|sku| sku.split(' ').next())
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
+            .contains(&ex_prod.sku)
+            && !(abc_prod.sku() == ex_prod.sku);
+        let has_room_for_new_alt_sku = abc_prod.alt_skus().len() < 3;
+        if vendor_sku_is_missing {
+            if has_room_for_new_alt_sku {
+                fixes.push(fix_alt_sku);
+            } else {
+                double_check.push(ex_prod.clone());
+            }
         }
         if !fixes.is_empty() {
             send_ctrl_n(&inventory_screen, false)?;
