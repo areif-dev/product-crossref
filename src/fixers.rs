@@ -3,7 +3,7 @@ use std::fs;
 use abc_product::AbcProduct;
 use abc_uiautomation::{
     inventory::{clear_upc, set_upc},
-    set_text_box_value, UIElement,
+    read_text_box_value, set_text_box_value, UIElement,
 };
 
 use crate::product::{DuplicateProducts, ExportedProduct};
@@ -109,6 +109,30 @@ pub fn fix_group(
     _ex_prod: &ExportedProduct,
 ) -> Result<(), abc_uiautomation::Error> {
     set_text_box_value(inventory_window, 39, "Z")?;
+    Ok(())
+}
+
+/// Add the vendor sku to an ABC item listing by adding it to the list of alternative skus
+///
+/// # Arguments
+/// * `inventory_window` - The [`UIElement`] representing the Inventory screen of Client4
+/// * `abc_prod` - Represents the ABC item as it exists before manipulation
+/// * `ex_prod` - The product listing that was exported from a vendor
+///
+/// # Errors
+/// Forwards any [`abc_uiautomation::Error`]s resulting from failing to set the group value in ABC
+pub fn fix_alt_sku(
+    inventory_window: &UIElement,
+    _abc_prod: &AbcProduct,
+    ex_prod: &ExportedProduct,
+) -> Result<(), abc_uiautomation::Error> {
+    for i in 35..38 {
+        let spot = read_text_box_value(inventory_window, i)?;
+        if spot.is_empty() {
+            set_text_box_value(inventory_window, i, &ex_prod.sku)?;
+            break;
+        }
+    }
     Ok(())
 }
 
