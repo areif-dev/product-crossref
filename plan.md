@@ -35,4 +35,5 @@
 
 ## Todo 
 - [x] Only mark a product as a duplicate if the "duplicates" have different skus 
+- [x] fix alt skus for existing products
 - [ ] try looking up products by alt skus
