@@ -37,3 +37,5 @@
 - [x] Only mark a product as a duplicate if the "duplicates" have different skus 
 - [x] fix alt skus for existing products
 - [ ] try looking up products by alt skus
+- [ ] speed up sending inputs to ABC
+- [x] Allow lowering retail if the cost and the retail have both dropped

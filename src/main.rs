@@ -119,7 +119,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         if let Some(retail) = ex_prod.retail {
             let cost_went_up = ex_prod.cost > abc_prod.cost();
             let list_went_up = retail > abc_prod.list();
-            if cost_went_up && list_went_up {
+            let cost_went_down = ex_prod.cost < abc_prod.cost();
+            let list_went_down = retail < abc_prod.list();
+            if cost_went_up && list_went_up || cost_went_down && list_went_down {
                 fixes.push(fix_retail);
             }
         }
