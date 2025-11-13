@@ -39,3 +39,5 @@
 - [ ] try looking up products by alt skus
 - [ ] speed up sending inputs to ABC
 - [x] Allow lowering retail if the cost and the retail have both dropped
+- [ ] Price changes should have a tolerance to work better with Bradley Caldwell 
+
