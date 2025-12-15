@@ -12,7 +12,7 @@ use abc_uiautomation::{
 use clap::Parser;
 use fixers::{fix_alt_sku, fix_cost, fix_group, fix_retail, fix_upc, fix_weight, write_logs};
 use product::{map_upcs, ExportedProduct};
-use rust_decimal::dec;
+use rust_decimal::{dec, Decimal};
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -112,7 +112,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         if weights_are_different {
             fixes.push(fix_weight);
         }
-        let costs_are_different = ex_prod.cost != abc_prod.cost();
+        let costs_are_different = (ex_prod.cost - abc_prod.cost()).abs() >= Decimal::new(1, 2);
         if costs_are_different {
             fixes.push(fix_cost);
         }
