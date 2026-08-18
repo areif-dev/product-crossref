@@ -29,10 +29,10 @@ pub fn fix_upc(
     clear_upc(inventory_window, true)?;
     for upc in abc_prod.upcs() {
         if upc != ex_prod.upc {
-            set_upc(inventory_window, upc)?;
+            set_upc(inventory_window, &upc)?;
         }
     }
-    set_upc(inventory_window, ex_prod.upc)?;
+    set_upc(inventory_window, &ex_prod.upc)?;
     Ok(())
 }
 
@@ -88,7 +88,7 @@ pub fn fix_retail(
     _abc_prod: &AbcProduct,
     ex_prod: &ExportedProduct,
 ) -> Result<(), abc_uiautomation::Error> {
-    if let Some(retail) = ex_prod.retail {
+    if let Some(retail) = &ex_prod.retail {
         set_text_box_value(inventory_window, 25, retail.to_string())?;
     }
     Ok(())

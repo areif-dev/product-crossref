@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-abc-product = { git = "https://github.com/areif-dev/abc-product", version = "0.1.0" }
+abc-product = { git = "https://github.com/areif-dev/abc-product", branch = "gtin" }
 abc-uiautomation = { version = "1.0.0", path = "../abc-uiautomation" }
+bigdecimal = "0.4.10"
 chrono = "0.4.42"
 clap = { version = "4.5.23", features = ["derive"] }
 csv = "1.3.1"
-ean13 = { git = "https://github.com/areif-dev/ean13", version = "0.4.1" }
-rust_decimal = { version = "1.38.0", features = ["macros"] }
+gtin = { git = "https://github.com/areif-dev/gtin", version = "1.1.0" }
 serde = { version = "1.0.228", features = ["derive"] }

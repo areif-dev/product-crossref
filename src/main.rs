@@ -1,7 +1,9 @@
 mod fixers;
 mod product;
 
+use bigdecimal::BigDecimal;
 use std::error::Error;
+use std::str::FromStr;
 
 use abc_product::{AbcParseError, AbcProduct};
 use abc_uiautomation::{
@@ -12,7 +14,6 @@ use abc_uiautomation::{
 use clap::Parser;
 use fixers::{fix_alt_sku, fix_cost, fix_group, fix_retail, fix_upc, fix_weight, write_logs};
 use product::{map_upcs, ExportedProduct};
-use rust_decimal::{dec, Decimal};
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -88,11 +89,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             all_dups.push(dups);
             continue;
         }
-        if let Some(retail) = ex_prod.retail {
-            if retail >= abc_prod.list() * dec!(2)
-                || ex_prod.cost >= abc_prod.cost() * dec!(2)
-                || retail <= abc_prod.list() / dec!(2)
-                || ex_prod.cost <= abc_prod.cost() / dec!(2)
+        if let Some(retail) = ex_prod.retail.clone() {
+            if retail >= abc_prod.list() * 2
+                || ex_prod.cost >= abc_prod.cost() * 2
+                || retail <= abc_prod.list() / 2
+                || ex_prod.cost <= abc_prod.cost() / 2
             {
                 double_check.push(ex_prod);
                 continue;
@@ -112,11 +113,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         if weights_are_different {
             fixes.push(fix_weight);
         }
-        let costs_are_different = (ex_prod.cost - abc_prod.cost()).abs() >= Decimal::new(1, 2);
+        let costs_are_different =
+            (&ex_prod.cost - abc_prod.cost()).abs() >= BigDecimal::from_str("0.01")?;
         if costs_are_different {
             fixes.push(fix_cost);
         }
-        if let Some(retail) = ex_prod.retail {
+        if let Some(retail) = ex_prod.retail.clone() {
             let cost_went_up = ex_prod.cost > abc_prod.cost();
             let list_went_up = retail > abc_prod.list();
             let cost_went_down = ex_prod.cost < abc_prod.cost();
