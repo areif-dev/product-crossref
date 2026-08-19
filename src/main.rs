@@ -9,11 +9,13 @@ use abc_product::{AbcParseError, AbcProduct};
 use abc_uiautomation::{
     ensure_abc,
     inventory::{load_inventory_screen, load_item},
-    send_ctrl_n, wait, UIElement, SHORT_WAIT_MS,
+    send_ctrl_n, wait, SHORT_WAIT_MS,
 };
 use clap::Parser;
 use fixers::{fix_alt_sku, fix_cost, fix_group, fix_retail, fix_upc, fix_weight, write_logs};
 use product::{map_upcs, ExportedProduct};
+
+use crate::fixers::Fixer;
 
 #[derive(clap::Parser)]
 #[command(version, about, long_about = None)]
@@ -64,9 +66,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
     let exported_products = cli
         .parse_export_file()
-        .or_else(|e| Err(format!("Failed to parse the export file due to `{}`", e)))?;
+        .map_err(|e| format!("Failed to parse the export file due to `{}`", e))?;
     let abc_products = AbcProduct::from_db_export(&cli.item_data, &cli.posted_data)
-        .or_else(|e| Err(format!("Failed to parse abc item export due to `{}`", e)))?;
+        .map_err(|e| format!("Failed to parse abc item export due to `{}`", e))?;
     let abc_prods_by_upc = map_upcs(&abc_products);
 
     let mut new_prods = Vec::new();
@@ -78,9 +80,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     wait(SHORT_WAIT_MS * 5);
     send_ctrl_n(&abc_window, false)?;
     for ex_prod in exported_products {
-        let mut fixes: Vec<
-            fn(&UIElement, &AbcProduct, &ExportedProduct) -> Result<(), abc_uiautomation::Error>,
-        > = Vec::new();
+        let mut fixes: Vec<Fixer> = Vec::new();
         let Some((dups, abc_prod)) = abc_prods_by_upc.get(&ex_prod.upc) else {
             new_prods.push(ex_prod);
             continue;
@@ -139,7 +139,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .map(|s| s.to_string())
             .collect::<Vec<_>>()
             .contains(&ex_prod.sku)
-            && !(abc_prod.sku() == ex_prod.sku);
+            && abc_prod.sku() != ex_prod.sku;
         let has_room_for_new_alt_sku = abc_prod.alt_skus().len() < 3;
         if vendor_sku_is_missing {
             if has_room_for_new_alt_sku {

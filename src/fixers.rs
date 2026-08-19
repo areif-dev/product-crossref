@@ -8,6 +8,9 @@ use abc_uiautomation::{
 
 use crate::product::{DuplicateProducts, ExportedProduct};
 
+pub type Fixer =
+    fn(&UIElement, &AbcProduct, &ExportedProduct) -> Result<(), abc_uiautomation::Error>;
+
 /// Controls ABC Client4 window to reorder the UPCs of an inventory item so that the primary UPC
 /// from a vendor exported list is the primary UPC in ABC. IE the last UPC in ABC will match the
 /// UPC from the export
@@ -141,9 +144,9 @@ pub fn fix_alt_sku(
 ///
 /// * There are multiple ABC listings that share a UPC (duplicate_products.txt)
 /// * There are no ABC products with a UPC that matches the UPC from the vendor export
-/// (new_products.txt)
+///   (new_products.txt)
 /// * There is a matching ABC listing, but either the list price or the cost is vastly different,
-/// so it is worth having a human double check it (double_check.txt)
+///   so it is worth having a human double check it (double_check.txt)
 ///
 /// Also writes a list of products that were successfully matched in ABC (matched_products.txt)
 ///
@@ -151,7 +154,7 @@ pub fn fix_alt_sku(
 /// * `dups` - The list of [`AbcProduct`]s that share a UPC
 /// * `new` - The list of [`ExportedProduct`]s that do not already exist in ABC
 /// * `check` - The list of [`ExportedProduct`]s that have a UPC match but seem to be vastly
-/// different from the matching ABC listing
+///   different from the matching ABC listing
 /// * `matches` - Lit of [`ExportedProduct`]s that have a good UPC match in ABC and were able to be adjusted in ABC
 ///
 /// # Errors
