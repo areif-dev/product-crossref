@@ -4,8 +4,8 @@ version = 4
 
 [[package]]
 name = "abc-product"
-version = "1.1.0"
-source = "git+https://github.com/areif-dev/abc-product?branch=gtin#fdcfd3b99276a3bf4c5487fda48cf8892daf24d5"
+version = "1.2.0"
+source = "git+https://github.com/areif-dev/abc-product?tag=v1.2.0#9687c27373821d86b949036ca34cb75a35745444"
 dependencies = [
  "bigdecimal",
  "chrono",

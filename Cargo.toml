@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-abc-product = { git = "https://github.com/areif-dev/abc-product", branch = "gtin" }
+abc-product = { git = "https://github.com/areif-dev/abc-product", tag = "v1.2.0" }
 abc-uiautomation = { version = "1.0.0", path = "../abc-uiautomation" }
 bigdecimal = "0.4.10"
 chrono = "0.4.42"

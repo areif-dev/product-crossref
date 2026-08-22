@@ -81,7 +81,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     send_ctrl_n(&abc_window, false)?;
     for ex_prod in exported_products {
         let mut fixes: Vec<Fixer> = Vec::new();
-        let Some((dups, abc_prod)) = abc_prods_by_upc.get(&ex_prod.upc) else {
+        let Some((dups, abc_prod)) = abc_prods_by_upc.get(&ex_prod.gtin) else {
             new_prods.push(ex_prod);
             continue;
         };
@@ -105,7 +105,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         if cli.dry_run {
             continue;
         }
-        let upc_in_correct_spot = abc_prod.upcs().ends_with(&[ex_prod.upc]);
+        let upc_in_correct_spot = abc_prod.upcs().ends_with(&[ex_prod.gtin]);
         if !upc_in_correct_spot {
             fixes.push(fix_upc);
         }

@@ -1,7 +1,7 @@
 use abc_product::AbcProduct;
 use bigdecimal::BigDecimal;
 use gtin::Gtin;
-use serde::Deserialize;
+use serde::{Deserialize, Serializer};
 use std::{collections::HashMap, str::FromStr};
 
 pub type DuplicateProducts = Vec<AbcProduct>;
@@ -53,14 +53,42 @@ where
     }
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+fn serialize_bigdecimal<S: Serializer>(dec: &BigDecimal, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(
+        &dec.with_scale_round(2, bigdecimal::RoundingMode::HalfEven)
+            .to_plain_string(),
+    )
+}
+
+fn serialize_optional_bigdecimal<S: Serializer>(
+    dec: &Option<BigDecimal>,
+    s: S,
+) -> Result<S::Ok, S::Error> {
+    match dec {
+        Some(d) => {
+            let str = d
+                .with_scale_round(2, bigdecimal::RoundingMode::HalfEven)
+                .to_plain_string();
+            s.serialize_some(&str)
+        }
+        None => s.serialize_none(),
+    }
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct ExportedProduct {
     pub sku: String,
-    pub upc: Gtin,
+    pub gtin: Gtin,
     pub desc: String,
     pub weight: Option<f64>,
-    #[serde(deserialize_with = "deserialize_bigdecimal")]
+    #[serde(
+        deserialize_with = "deserialize_bigdecimal",
+        serialize_with = "serialize_bigdecimal"
+    )]
     pub cost: BigDecimal,
-    #[serde(deserialize_with = "deserialize_optional_bigdecimal")]
+    #[serde(
+        deserialize_with = "deserialize_optional_bigdecimal",
+        serialize_with = "serialize_optional_bigdecimal"
+    )]
     pub retail: Option<BigDecimal>,
 }

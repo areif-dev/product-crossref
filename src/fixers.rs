@@ -1,4 +1,4 @@
-use std::fs;
+use std::{error::Error, fs};
 
 use abc_product::AbcProduct;
 use abc_uiautomation::{
@@ -31,11 +31,11 @@ pub fn fix_upc(
 ) -> Result<(), abc_uiautomation::Error> {
     clear_upc(inventory_window, true)?;
     for upc in abc_prod.upcs() {
-        if upc != ex_prod.upc {
+        if upc != ex_prod.gtin {
             set_upc(inventory_window, &upc)?;
         }
     }
-    set_upc(inventory_window, &ex_prod.upc)?;
+    set_upc(inventory_window, &ex_prod.gtin)?;
     Ok(())
 }
 
@@ -164,7 +164,7 @@ pub fn write_logs(
     new: Vec<ExportedProduct>,
     check: Vec<ExportedProduct>,
     matches: Vec<ExportedProduct>,
-) -> std::io::Result<()> {
+) -> Result<(), Box<dyn Error>> {
     fs::write(
         "./duplicate_products.txt",
         format!(
@@ -172,13 +172,13 @@ pub fn write_logs(
             dups
         ),
     )?;
-    fs::write(
-        "./new_products.txt",
-        format!(
-            "The following products are new to ABC. Please enter them manually.\n\n{:#?}",
-            new
-        ),
-    )?;
+    let mut writer = csv::WriterBuilder::new()
+        .has_headers(true)
+        .from_path("./new_products.csv")?;
+    for prod in new {
+        writer.serialize(prod)?;
+    }
+    writer.flush()?;
     fs::write("./double_check.txt", format!("The following products seem to have changed wildly. Please double check that their listings are correct.\n\n{:#?}", check))?;
     fs::write(
         "./matched_products.txt",
