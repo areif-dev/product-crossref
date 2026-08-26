@@ -6,7 +6,7 @@ use abc_uiautomation::{
     read_text_box_value, set_text_box_value, UIElement,
 };
 
-use crate::product::{DuplicateProducts, ExportedProduct};
+use crate::product::{DuplicateProducts, ExportedProduct, NewProduct};
 
 pub type Fixer =
     fn(&UIElement, &AbcProduct, &ExportedProduct) -> Result<(), abc_uiautomation::Error>;
@@ -176,6 +176,7 @@ pub fn write_logs(
         .has_headers(true)
         .from_path("./new_products.csv")?;
     for prod in new {
+        let prod = NewProduct::from(prod);
         writer.serialize(prod)?;
     }
     writer.flush()?;

@@ -92,3 +92,48 @@ pub struct ExportedProduct {
     )]
     pub retail: Option<BigDecimal>,
 }
+
+/// Same information as [`ExportedProduct`], but adds other fields for alt skus, general ledger
+/// number, discount group, and vendor code. Used exclusively for writing the new_products.csv file
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
+pub struct NewProduct {
+    pub sku: String,
+    pub gtin: Gtin,
+    pub desc: String,
+    pub weight: Option<f64>,
+    #[serde(
+        deserialize_with = "deserialize_bigdecimal",
+        serialize_with = "serialize_bigdecimal"
+    )]
+    pub cost: BigDecimal,
+    #[serde(
+        deserialize_with = "deserialize_optional_bigdecimal",
+        serialize_with = "serialize_optional_bigdecimal"
+    )]
+    pub retail: Option<BigDecimal>,
+    pub alt1: Option<String>,
+    pub alt2: Option<String>,
+    pub alt3: Option<String>,
+    pub gl: Option<String>,
+    pub group: Option<String>,
+    pub vendor: Option<String>,
+}
+
+impl From<ExportedProduct> for NewProduct {
+    fn from(value: ExportedProduct) -> Self {
+        Self {
+            sku: value.sku,
+            gtin: value.gtin,
+            desc: value.desc,
+            weight: value.weight,
+            cost: value.cost,
+            retail: value.retail,
+            alt1: None,
+            alt2: None,
+            alt3: None,
+            gl: None,
+            group: None,
+            vendor: None,
+        }
+    }
+}
