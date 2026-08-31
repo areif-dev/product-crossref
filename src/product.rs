@@ -25,13 +25,11 @@ pub fn map_upcs(
     upc_map
 }
 
-fn parse_bigdecimal_price<'d, D>(s: String) -> Result<BigDecimal, D::Error>
+fn parse_bigdecimal<'d, D>(s: String) -> Result<BigDecimal, D::Error>
 where
     D: serde::Deserializer<'d>,
 {
-    Ok(BigDecimal::from_str(&s)
-        .map_err(serde::de::Error::custom)?
-        .with_scale_round(2, bigdecimal::RoundingMode::HalfEven))
+    Ok(BigDecimal::from_str(&s).map_err(serde::de::Error::custom)?)
 }
 
 fn deserialize_bigdecimal<'d, D>(deserializer: D) -> Result<BigDecimal, D::Error>
@@ -39,7 +37,7 @@ where
     D: serde::Deserializer<'d>,
 {
     let s = String::deserialize(deserializer)?;
-    parse_bigdecimal_price::<D>(s)
+    parse_bigdecimal::<D>(s)
 }
 
 fn deserialize_optional_bigdecimal<'de, D>(deserializer: D) -> Result<Option<BigDecimal>, D::Error>
@@ -48,7 +46,7 @@ where
 {
     let opt: Option<String> = Option::deserialize(deserializer)?;
     match opt {
-        Some(d) => Ok(Some(parse_bigdecimal_price::<D>(d)?)),
+        Some(d) => Ok(Some(parse_bigdecimal::<D>(d)?)),
         None => Ok(None),
     }
 }
