@@ -52,10 +52,7 @@ where
 }
 
 fn serialize_bigdecimal<S: Serializer>(dec: &BigDecimal, s: S) -> Result<S::Ok, S::Error> {
-    s.serialize_str(
-        &dec.with_scale_round(2, bigdecimal::RoundingMode::HalfEven)
-            .to_plain_string(),
-    )
+    s.serialize_str(&dec.to_plain_string())
 }
 
 fn serialize_optional_bigdecimal<S: Serializer>(
@@ -64,9 +61,7 @@ fn serialize_optional_bigdecimal<S: Serializer>(
 ) -> Result<S::Ok, S::Error> {
     match dec {
         Some(d) => {
-            let str = d
-                .with_scale_round(2, bigdecimal::RoundingMode::HalfEven)
-                .to_plain_string();
+            let str = d.to_plain_string();
             s.serialize_some(&str)
         }
         None => s.serialize_none(),
