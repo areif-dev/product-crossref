@@ -93,7 +93,7 @@ pub struct NewProduct {
     pub sku: String,
     pub gtin: Gtin,
     pub desc: String,
-    pub weight: Option<f64>,
+    pub weight_lbs: Option<f64>,
     #[serde(
         deserialize_with = "deserialize_bigdecimal",
         serialize_with = "serialize_bigdecimal"
@@ -118,7 +118,7 @@ impl From<ExportedProduct> for NewProduct {
             sku: value.sku,
             gtin: value.gtin,
             desc: value.desc,
-            weight: value.weight,
+            weight_lbs: value.weight,
             cost: value.cost,
             retail: value.retail,
             alt1: None,

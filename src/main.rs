@@ -114,7 +114,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             fixes.push(fix_weight);
         }
         let costs_are_different =
-            (&ex_prod.cost - abc_prod.cost()).abs() >= BigDecimal::from_str("0.01")?;
+            (&ex_prod.cost - abc_prod.cost()).abs() >= BigDecimal::from_str("0.001")?;
         if costs_are_different {
             fixes.push(fix_cost);
         }
