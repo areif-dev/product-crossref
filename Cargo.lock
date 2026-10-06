@@ -394,7 +394,7 @@ dependencies = [
 
 [[package]]
 name = "product-crossref"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "abc-product",
  "abc-uiautomation",
