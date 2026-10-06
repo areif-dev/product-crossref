@@ -84,6 +84,9 @@ pub struct ExportedProduct {
         serialize_with = "serialize_optional_bigdecimal"
     )]
     pub retail: Option<BigDecimal>,
+    pub alt1: Option<String>,
+    pub alt2: Option<String>,
+    pub alt3: Option<String>,
 }
 
 /// Same information as [`ExportedProduct`], but adds other fields for alt skus, general ledger
@@ -121,9 +124,9 @@ impl From<ExportedProduct> for NewProduct {
             weight_lbs: value.weight,
             cost: value.cost,
             retail: value.retail,
-            alt1: None,
-            alt2: None,
-            alt3: None,
+            alt1: value.alt1,
+            alt2: value.alt2,
+            alt3: value.alt3,
             gl: None,
             group: None,
             vendor: None,
