@@ -83,7 +83,7 @@ pub struct ExportedProduct {
         deserialize_with = "deserialize_optional_bigdecimal",
         serialize_with = "serialize_optional_bigdecimal"
     )]
-    pub retail: Option<BigDecimal>,
+    pub list: Option<BigDecimal>,
     pub alt1: Option<String>,
     pub alt2: Option<String>,
     pub alt3: Option<String>,
@@ -106,7 +106,7 @@ pub struct NewProduct {
         deserialize_with = "deserialize_optional_bigdecimal",
         serialize_with = "serialize_optional_bigdecimal"
     )]
-    pub retail: Option<BigDecimal>,
+    pub list: Option<BigDecimal>,
     pub alt1: Option<String>,
     pub alt2: Option<String>,
     pub alt3: Option<String>,
@@ -123,7 +123,7 @@ impl From<ExportedProduct> for NewProduct {
             desc: value.desc,
             weight_lbs: value.weight,
             cost: value.cost,
-            retail: value.retail,
+            list: value.list,
             alt1: value.alt1,
             alt2: value.alt2,
             alt3: value.alt3,

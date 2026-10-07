@@ -85,14 +85,14 @@ pub fn fix_cost(
 /// * `ex_prod` - The product listing that was exported from a vendor
 ///
 /// # Errors
-/// Forwards any [`abc_uiautomation::Error`]s resulting from failing to set the retail value in ABC
-pub fn fix_retail(
+/// Forwards any [`abc_uiautomation::Error`]s resulting from failing to set the list value in ABC
+pub fn fix_list(
     inventory_window: &UIElement,
     _abc_prod: &AbcProduct,
     ex_prod: &ExportedProduct,
 ) -> Result<(), abc_uiautomation::Error> {
-    if let Some(retail) = &ex_prod.retail {
-        set_text_box_value(inventory_window, 25, retail.to_string())?;
+    if let Some(list) = &ex_prod.list {
+        set_text_box_value(inventory_window, 25, list.to_string())?;
     }
     Ok(())
 }

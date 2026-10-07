@@ -12,7 +12,7 @@ use abc_uiautomation::{
     send_ctrl_n, wait, SHORT_WAIT_MS,
 };
 use clap::Parser;
-use fixers::{fix_alt_sku, fix_cost, fix_group, fix_retail, fix_upc, fix_weight, write_logs};
+use fixers::{fix_alt_sku, fix_cost, fix_group, fix_list, fix_upc, fix_weight, write_logs};
 use product::{map_upcs, ExportedProduct};
 
 use crate::fixers::Fixer;
@@ -89,10 +89,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             all_dups.push(dups);
             continue;
         }
-        if let Some(retail) = ex_prod.retail.clone() {
-            if retail >= abc_prod.list() * 2
+        if let Some(list) = ex_prod.list.clone() {
+            if list >= abc_prod.list() * 2
                 || ex_prod.cost >= abc_prod.cost() * 2
-                || retail <= abc_prod.list() / 2
+                || list <= abc_prod.list() / 2
                 || ex_prod.cost <= abc_prod.cost() / 2
             {
                 double_check.push(ex_prod);
@@ -118,13 +118,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         if costs_are_different {
             fixes.push(fix_cost);
         }
-        if let Some(retail) = ex_prod.retail.clone() {
+        if let Some(list) = ex_prod.list.clone() {
             let cost_went_up = ex_prod.cost > abc_prod.cost();
-            let list_went_up = retail > abc_prod.list();
+            let list_went_up = list > abc_prod.list();
             let cost_went_down = ex_prod.cost < abc_prod.cost();
-            let list_went_down = retail < abc_prod.list();
+            let list_went_down = list < abc_prod.list();
             if cost_went_up && list_went_up || cost_went_down && list_went_down {
-                fixes.push(fix_retail);
+                fixes.push(fix_list);
             }
         }
         let group_is_missing =
