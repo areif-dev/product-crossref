@@ -1,7 +1,7 @@
 use abc_product::AbcProduct;
 use bigdecimal::BigDecimal;
 use gtin::Gtin;
-use serde::{Deserialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 use std::{collections::HashMap, str::FromStr};
 
 pub type DuplicateProducts = Vec<AbcProduct>;
@@ -29,7 +29,7 @@ fn parse_bigdecimal<'d, D>(s: String) -> Result<BigDecimal, D::Error>
 where
     D: serde::Deserializer<'d>,
 {
-    Ok(BigDecimal::from_str(&s).map_err(serde::de::Error::custom)?)
+    BigDecimal::from_str(&s).map_err(serde::de::Error::custom)
 }
 
 fn deserialize_bigdecimal<'d, D>(deserializer: D) -> Result<BigDecimal, D::Error>
@@ -130,6 +130,65 @@ impl From<ExportedProduct> for NewProduct {
             gl: None,
             group: None,
             vendor: None,
+        }
+    }
+}
+
+/// Store the differences between an [`AbcProduct`] and an [`ExportedProduct`]
+#[derive(Debug, Serialize)]
+pub struct ProductDiff {
+    old_sku: String,
+    new_sku: String,
+    old_gtin: Option<Gtin>,
+    new_gtin: Option<Gtin>,
+    old_weight: Option<f64>,
+    new_weight: Option<f64>,
+    old_cost: Option<BigDecimal>,
+    new_cost: Option<BigDecimal>,
+    old_list: Option<BigDecimal>,
+    new_list: Option<BigDecimal>,
+}
+
+impl From<(ExportedProduct, AbcProduct)> for ProductDiff {
+    fn from((exported_prod, abc_prod): (ExportedProduct, AbcProduct)) -> Self {
+        ProductDiff::from((abc_prod, exported_prod))
+    }
+}
+
+impl From<(AbcProduct, ExportedProduct)> for ProductDiff {
+    fn from((abc_prod, exported_prod): (AbcProduct, ExportedProduct)) -> Self {
+        let (old_sku, new_sku) = (abc_prod.sku(), exported_prod.sku);
+        let (old_gtin, new_gtin) = if abc_prod.upcs().last() == Some(&exported_prod.gtin) {
+            (None, None)
+        } else {
+            (abc_prod.upcs().last().cloned(), Some(exported_prod.gtin))
+        };
+        let (old_weight, new_weight) = if abc_prod.weight() == exported_prod.weight {
+            (None, None)
+        } else {
+            (abc_prod.weight(), exported_prod.weight)
+        };
+        let (old_cost, new_cost) = if abc_prod.cost() == exported_prod.cost {
+            (None, None)
+        } else {
+            (Some(abc_prod.cost()), Some(exported_prod.cost))
+        };
+        let (old_list, new_list) = if Some(abc_prod.list()) == exported_prod.list {
+            (None, None)
+        } else {
+            (Some(abc_prod.list()), exported_prod.list)
+        };
+        Self {
+            old_sku,
+            new_sku,
+            old_gtin,
+            new_gtin,
+            old_weight,
+            new_weight,
+            old_cost,
+            new_cost,
+            old_list,
+            new_list,
         }
     }
 }

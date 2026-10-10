@@ -1,12 +1,12 @@
 [package]
 name = "product-crossref"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 
 [dependencies]
 abc-product = { git = "https://github.com/areif-dev/abc-product", tag = "v1.2.0" }
 abc-uiautomation = { version = "1.0.0", path = "../abc-uiautomation" }
-bigdecimal = "0.4.10"
+bigdecimal = { version = "0.4.10", features = ["serde"] }
 chrono = "0.4.42"
 clap = { version = "4.5.23", features = ["derive"] }
 csv = "1.3.1"

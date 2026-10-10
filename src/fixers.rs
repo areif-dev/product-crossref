@@ -6,7 +6,7 @@ use abc_uiautomation::{
     read_text_box_value, set_text_box_value, UIElement,
 };
 
-use crate::product::{DuplicateProducts, ExportedProduct, NewProduct};
+use crate::product::{DuplicateProducts, ExportedProduct, NewProduct, ProductDiff};
 
 pub type Fixer =
     fn(&UIElement, &AbcProduct, &ExportedProduct) -> Result<(), abc_uiautomation::Error>;
@@ -163,7 +163,7 @@ pub fn write_logs(
     dups: Vec<&DuplicateProducts>,
     new: Vec<ExportedProduct>,
     check: Vec<ExportedProduct>,
-    matches: Vec<ExportedProduct>,
+    matches: Vec<(ExportedProduct, AbcProduct)>,
 ) -> Result<(), Box<dyn Error>> {
     fs::write(
         "./duplicate_products.txt",
@@ -181,12 +181,13 @@ pub fn write_logs(
     }
     writer.flush()?;
     fs::write("./double_check.txt", format!("The following products seem to have changed wildly. Please double check that their listings are correct.\n\n{:#?}", check))?;
-    fs::write(
-        "./matched_products.txt",
-        format!(
-            "The following products were successfully cross referenced.\n\n{:#?}",
-            matches
-        ),
-    )?;
+
+    let mut writer = csv::WriterBuilder::new()
+        .has_headers(true)
+        .from_path("./matched_products.csv")?;
+    for (exported_prod, abc_prod) in matches {
+        writer.serialize(ProductDiff::from((abc_prod, exported_prod)))?;
+    }
+    writer.flush()?;
     Ok(())
 }

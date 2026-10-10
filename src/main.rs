@@ -90,21 +90,16 @@ fn main() -> Result<(), Box<dyn Error>> {
             continue;
         }
         if let Some(list) = ex_prod.list.clone() {
-            if list >= abc_prod.list() * 2
-                || ex_prod.cost >= abc_prod.cost() * 2
-                || list <= abc_prod.list() / 2
-                || ex_prod.cost <= abc_prod.cost() / 2
-            {
+            let list_changed_greatly = list >= abc_prod.list() * 2 || list <= abc_prod.list() / 2;
+            let cost_changed_greatly =
+                ex_prod.cost >= abc_prod.cost() * 2 || ex_prod.cost <= abc_prod.cost() / 2;
+            if list_changed_greatly || cost_changed_greatly {
                 double_check.push(ex_prod);
                 continue;
             }
         }
-        matched.push(ex_prod.clone());
+        matched.push((ex_prod.clone(), abc_prod.clone()));
 
-        // Skip actually making changes in ABC if the user asked for a dry run
-        if cli.dry_run {
-            continue;
-        }
         let upc_in_correct_spot = abc_prod.upcs().ends_with(&[ex_prod.gtin]);
         if !upc_in_correct_spot {
             fixes.push(fix_upc);
@@ -148,7 +143,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 double_check.push(ex_prod.clone());
             }
         }
-        if !fixes.is_empty() {
+        if !fixes.is_empty() && !cli.dry_run {
             send_ctrl_n(&inventory_screen, false)?;
             load_item(&inventory_screen, &abc_prod.sku())?;
             for f in fixes {
